@@ -1,0 +1,15 @@
+langchain>=0.1.16
+langgraph>=0.0.40
+langchain-openai>=0.1.6
+openai>=1.25.0
+python-dotenv
+nest_asyncio
+streamlit
+streamlit-chat
+tiktoken
+mcp
+fastapi
+uvicorn[standard]
+httpx
+beautifulsoup4
+tenacity
