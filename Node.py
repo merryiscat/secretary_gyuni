@@ -5,8 +5,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_openai import ChatOpenAI
 from State import *
 from Mcp_Tool import *
-from .app.chain import identity_chain, intent_classify_chain, intent_extract_chain, talk_chain, food_recommand_chain
-from logger.observability import log_node_outputs
+from app.chain import identity_chain, intent_classify_chain, intent_extract_chain, talk_chain, food_recommand_chain
+from app.logger.observability import log_node_outputs
 
 # 사용자 입력 노드 정의
 @log_node_outputs("user_input_node",

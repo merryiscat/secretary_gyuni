@@ -14,7 +14,7 @@ def load_prompt_from_file(path: str) -> str:
         return f.read()
     
 # 프롬프트 파일 경로
-prompt_text = load_prompt_from_file("chain/prompt/talk_prompt.txt")
+prompt_text = load_prompt_from_file("app/chain/prompt/talk_prompt.txt")
 talk_prompt = ChatPromptTemplate.from_template(prompt_text)
 
 talk_parser = JsonOutputParser(pydantic_object=TalkOutput)

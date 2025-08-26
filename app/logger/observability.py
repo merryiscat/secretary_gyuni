@@ -2,7 +2,7 @@
 import time, uuid, json, traceback
 from functools import wraps
 from typing import Dict, Any, Callable, Iterable, Optional
-from logger.logger import get_logger
+from app.logger.logger import get_logger
 
 logger = get_logger("graph")
 

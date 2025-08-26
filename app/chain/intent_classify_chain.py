@@ -13,7 +13,7 @@ def load_prompt_from_file(path: str) -> str:
         return f.read()
     
 # 프롬프트 파일 경로
-prompt_text = load_prompt_from_file("chain/prompt/intent_classify_prompt.txt")
+prompt_text = load_prompt_from_file("app/chain/prompt/intent_classify_prompt.txt")
 intent_classify_prompt = ChatPromptTemplate.from_template(prompt_text)
 
 intent_classify_parser = JsonOutputParser(pydantic_object=IntentclassifyOutput)
