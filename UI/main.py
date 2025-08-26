@@ -1,9 +1,16 @@
 # streamlit_recipe_app.py
 
 import streamlit as st
-from streamlit_chat import message
 from dotenv import load_dotenv
+
+import sys
 import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 이미지 경로 설정
+ASSETS_PATH = os.path.join(os.path.dirname(__file__), "assets", "images")
+USER_AVATAR_PATH = os.path.join(ASSETS_PATH, "user_avatar.png")
+ASSISTANT_AVATAR_PATH = os.path.join(ASSETS_PATH, "assistant_avatar.png")
 
 from State import *
 from Mcp_Tool import *
@@ -21,10 +28,193 @@ load_dotenv()
 graph_app = Project_Graph()
 
 # 페이지 설정
-st.set_page_config(page_title="식사비서 재규니", layout="wide", page_icon="")
+st.set_page_config(page_title="식사비서 재규니", layout="wide", page_icon="🍽️")
+
+# CSS 스타일 추가  
+st.markdown("""
+<style>
+/* 전체 채팅 영역 스타일링 */
+.main .block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 5rem !important;
+}
+
+/* 사용자 메시지만 오른쪽 정렬 - img alt="user avatar"로 구분 */
+.stChatMessage:has(img[alt="user avatar"]) {
+    display: flex !important;
+    flex-direction: row-reverse !important;
+    justify-content: flex-start !important;
+    margin-bottom: 1.5rem !important;
+    padding: 0 1rem !important;
+}
+
+/* 어시스턴트 메시지는 왼쪽 정렬 - img alt="assistant avatar"로 구분 */
+.stChatMessage:has(img[alt="assistant avatar"]) {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    margin-bottom: 1.5rem !important;
+    padding: 0 1rem !important;
+}
+
+/* 사용자 메시지 내용 - 모던한 파란색 말풍선 */
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-radius: 20px 20px 5px 20px !important;
+    margin-left: auto !important;
+    margin-right: 0.75rem !important;
+    max-width: 75% !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3) !important;
+    overflow: hidden !important;
+    border: none !important;
+}
+
+/* 사용자 메시지 모든 emotion-cache 클래스 배경 제거 */
+.stChatMessage:has(img[alt="user avatar"]) [class*="st-emotion-cache"] {
+    background: transparent !important;
+}
+
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* 사용자 메시지의 기본 배경 제거 */
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"]::before,
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"]::after {
+    display: none !important;
+}
+
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"] > div {
+    background: transparent !important;
+}
+
+/* 사용자 메시지 내부 컨테이너들 스타일 재설정 */
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"] .stVerticalBlock,
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"] .stElementContainer,
+.stChatMessage:has(img[alt="user avatar"]) [data-testid="stChatMessageContent"] .stMarkdown {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* 어시스턴트 메시지 컨테이너 - 왼쪽 정렬 */
+.stChatMessage:has([data-testid="stChatMessageAvatarAssistant"]) {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    margin-bottom: 1.5rem !important;
+    padding: 0 1rem !important;
+}
+
+/* 어시스턴트 메시지 내용 - 세련된 회색 말풍선 */
+.stChatMessage:has(img[alt="assistant avatar"]) [data-testid="stChatMessageContent"] {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+    color: #2d3748 !important;
+    border-radius: 20px 20px 20px 5px !important;
+    margin-right: auto !important;
+    margin-left: 0.75rem !important;
+    max-width: 75% !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(195, 207, 226, 0.5) !important;
+    overflow: hidden !important;
+}
+
+/* 어시스턴트 메시지 내부 컨테이너들 스타일 재설정 */
+.stChatMessage:has(img[alt="assistant avatar"]) [data-testid="stChatMessageContent"] .stVerticalBlock,
+.stChatMessage:has(img[alt="assistant avatar"]) [data-testid="stChatMessageContent"] .stElementContainer,
+.stChatMessage:has(img[alt="assistant avatar"]) [data-testid="stChatMessageContent"] .stMarkdown {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* 메시지 내부 텍스트 스타일링 */
+.stChatMessage [data-testid="stMarkdownContainer"] {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.stChatMessage [data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    line-height: 1.5 !important;
+    font-size: 0.95rem !important;
+}
+
+/* 아바타 스타일링 - 크기 조정 */
+.stChatMessage img,
+[data-testid="stChatMessageAvatarUser"],
+[data-testid="stChatMessageAvatarAssistant"] {
+    min-width: 3.5rem !important;
+    width: 3.5rem !important;
+    height: 3.5rem !important;
+    border-radius: 50% !important;
+    background: white !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    object-fit: cover !important;
+    flex-shrink: 0 !important;
+}
+
+/* 사용자 아바타 색상 */
+[data-testid="stChatMessageAvatarUser"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+/* 어시스턴트 아바타 색상 */
+[data-testid="stChatMessageAvatarAssistant"] {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+    color: white !important;
+}
+
+/* 호버 효과 */
+.stChatMessage:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"]:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stChatMessage:has([data-testid="stChatMessageAvatarAssistant"]) [data-testid="stChatMessageContent"]:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease !important;
+}
+
+/* 메시지 루트 자체의 배경 제거 (아이콘/말풍선은 건드리지 않음) */
+.stChatMessage {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* 콘텐츠 랩퍼 배경만 제거: 아바타/말풍선은 제외 */
+.stChatMessage > div[class^="st-emotion-cache"]
+  :not([data-testid^="stChatMessageAvatar"])
+  :not([data-testid="stChatMessageContent"]) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+[data-testid="stChatMessageAvatarUser"] {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+}
+[data-testid="stChatMessageAvatarAssistant"] {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+  color: white !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # 챗봇 메시지 형식 출력
-with st.chat_message("assistant"):
+with st.chat_message("assistant", avatar=ASSISTANT_AVATAR_PATH if os.path.exists(ASSISTANT_AVATAR_PATH) else None):
     st.markdown("안녕하세요! 저는 당신의 **식사비서 재규니**입니다. 무엇을 도와드릴까요?")
 
 # 사이드바
@@ -42,36 +232,18 @@ if "messages" not in st.session_state:
 # ✨ 유틸 함수 정의
 # =============================
 
-def render_user_input(user_input: str):
-    """유저 입력 메시지 출력"""
-    st.chat_message("user").markdown(user_input)
-
-def render_response(result: dict):
-    """LangGraph 응답 처리 및 출력"""
-    if "final_recommendations" in result:
-        response = result["final_recommendations"]
-
-        # 마크다운 줄바꿈 적용
-        if isinstance(response, str):
-            st.markdown(response.replace('\n', '  \n'))
-        else:
-            st.write(response)
-
-    elif "exit_message" in result:
-        # 의도 분류 실패 또는 종료 응답
-        st.info(result["exit_message"] + "\n\n다른 방식으로 다시 말씀해 주세요 🙂")
-
-    else:
-        # 예외 처리
-        st.error("❌ 추천 결과를 불러오는 데 실패했습니다.")
-        with st.expander("📦 디버그 정보 보기"):
-            st.json(result)
 
 # =============================
 # 💬 기존 대화 출력
 # =============================
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+    avatar_path = None
+    if msg["role"] == "user" and os.path.exists(USER_AVATAR_PATH):
+        avatar_path = USER_AVATAR_PATH
+    elif msg["role"] == "assistant" and os.path.exists(ASSISTANT_AVATAR_PATH):
+        avatar_path = ASSISTANT_AVATAR_PATH
+    
+    with st.chat_message(msg["role"], avatar=avatar_path):
         st.markdown(msg["content"])
 
 # =============================
@@ -82,11 +254,11 @@ user_input = st.chat_input("오늘 뭐 먹을까?")
 
 if user_input:
     # 유저 메시지 출력 및 저장
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=USER_AVATAR_PATH if os.path.exists(USER_AVATAR_PATH) else None):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=ASSISTANT_AVATAR_PATH if os.path.exists(ASSISTANT_AVATAR_PATH) else None):
         with st.spinner("채팅작성중.."):
             try:
                 result = graph_app.invoke({
