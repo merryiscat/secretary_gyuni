@@ -10,6 +10,7 @@ def simple_route(state: OverallState) -> str:
 def Project_Graph():
     builder = StateGraph(OverallState)
 
+    builder.add_node("conversation_history_node", conversation_history_node)
     builder.add_node("user_input_node", user_input_node)
     builder.add_node("intent_classify", intent_classify_node)
     builder.add_node("test_node", test_node)
@@ -23,7 +24,8 @@ def Project_Graph():
     builder.add_node("result_make", result_make_node)
     builder.add_node("exit_node", exit_node)
 
-    builder.set_entry_point("user_input_node")
+    builder.set_entry_point("conversation_history_node")
+    builder.add_edge("conversation_history_node", "user_input_node")
     builder.add_edge("user_input_node", "intent_classify")
     builder.add_conditional_edges(
     "intent_classify",
@@ -38,8 +40,9 @@ def Project_Graph():
     builder.set_finish_point("identity_node")
     builder.set_finish_point("exit_node")
     builder.set_finish_point("talk_node")
+    builder.set_finish_point("food_recommand_node")
 
     memory = MemorySaver()
-    app = builder.compile(checkpointer=None)
+    app = builder.compile(checkpointer=memory)
 
     return app 

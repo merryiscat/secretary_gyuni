@@ -23,6 +23,8 @@ class OverallState(TypedDict):
     messages: Annotated[list, add_messages]
     exit_message: str
     identity: str
+    conversation_history: str
+    session_id: str
      
 class EndState(TypedDict):
    final_recommendations: str

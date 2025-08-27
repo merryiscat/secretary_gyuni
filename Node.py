@@ -8,16 +8,68 @@ from Mcp_Tool import *
 from app.chain import identity_chain, intent_classify_chain, intent_extract_chain, talk_chain, food_recommand_chain
 from app.logger.observability import log_node_outputs
 
+# 대화 기록 관리 노드
+@log_node_outputs("conversation_history_node",
+                  include_keys=["conversation_history","session_id","run_id"])
+def conversation_history_node(state: OverallState) -> OverallState:
+    messages = state.get("messages", [])
+    session_id = state.get("session_id", "default_session")
+    
+    print(f"디버깅: messages = {messages}")
+    print(f"디버깅: messages 타입 = {type(messages)}")
+    
+    # 최근 5턴의 대화만 유지 (메모리 효율성)
+    recent_messages = messages[-10:] if len(messages) > 10 else messages
+    
+    # 대화 기록을 텍스트로 변환
+    conversation_history = ""
+    
+    try:
+        for i, msg in enumerate(recent_messages):
+            print(f"디버깅: msg[{i}] = {msg}, 타입 = {type(msg)}")
+            
+            if isinstance(msg, (list, tuple)) and len(msg) >= 2:
+                role, content = msg[0], msg[1]
+                if role == "user":
+                    conversation_history += f"사용자: {content}\n"
+                elif role == "assistant":
+                    conversation_history += f"재규니: {content}\n"
+            elif isinstance(msg, dict):
+                # UI에서 오는 딕셔너리 형태 처리
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                if role == "user":
+                    conversation_history += f"사용자: {content}\n"
+                elif role == "assistant":
+                    conversation_history += f"재규니: {content}\n"
+            else:
+                print(f"디버깅: 처리할 수 없는 메시지 형태: {msg}")
+                
+    except Exception as e:
+        print(f"디버깅: 메시지 처리 중 오류: {e}")
+        conversation_history = ""
+    
+    return {
+        **state,
+        "conversation_history": conversation_history,
+        "session_id": session_id
+    }
+
 # 사용자 입력 노드 정의
 @log_node_outputs("user_input_node",
                   include_keys=["user_input","messages","run_id"])
-def user_input_node(state: InputState) -> OverallState:
+def user_input_node(state: OverallState) -> OverallState:
     print("디버깅: state 입력값 =", state)
     user_input = state["user_input"]
+    
+    # 기존 메시지에 새로운 사용자 입력 추가
+    current_messages = state.get("messages", [])
+    updated_messages = current_messages + [("user", user_input)]
+    
     return {
         **state,
         "user_input": user_input,
-        "messages": [("user", user_input)],
+        "messages": updated_messages,
     }
 
 # ──────────────────────── 1. LangGraph 노드 정의 ────────────────────────
@@ -27,7 +79,12 @@ def user_input_node(state: InputState) -> OverallState:
                   include_keys=["intent","run_id"])
 def intent_classify_node(state: OverallState) -> OverallState:
     user_input = state["user_input"]
-    result = intent_classify_chain.invoke({"user_input": user_input})
+    conversation_history = state.get("conversation_history", "")
+    
+    # 대화 기록과 함께 의도 분류
+    context_input = f"대화기록:\n{conversation_history}\n현재 질문: {user_input}"
+    result = intent_classify_chain.invoke({"user_input": context_input})
+    
     return {
         **state,
         "intent": result["intent"]
@@ -38,11 +95,21 @@ def intent_classify_node(state: OverallState) -> OverallState:
                   include_keys=["exit_message","run_id"], max_str=400)
 def food_recommand_node(state: OverallState) -> EndState:
     user_input = state["user_input"]
-    result = food_recommand_chain.invoke({"user_input": user_input})
+    conversation_history = state.get("conversation_history", "")
+    
+    # 대화 기록과 함께 음식 추천
+    context_input = f"대화기록:\n{conversation_history}\n현재 질문: {user_input}"
+    result = food_recommand_chain.invoke({"user_input": context_input})
     print("디버깅: food_recommandnode 결과 =", result)
+    
+    # 응답을 메시지에 추가
+    current_messages = state.get("messages", [])
+    updated_messages = current_messages + [("assistant", result["content"])]
+    
     return {
         **state,
-        "exit_message": result["content"]
+        "exit_message": result["content"],
+        "messages": updated_messages
     }
 
 # 정체성 정의 노드
@@ -50,11 +117,19 @@ def food_recommand_node(state: OverallState) -> EndState:
                   include_keys=["exit_message","run_id"], max_str=400)
 def identity_node(state: OverallState) -> EndState:
     user_input = state["user_input"]
-    result = identity_chain.invoke({"user_input": user_input})
+    conversation_history = state.get("conversation_history", "")
+    
+    context_input = f"대화기록:\n{conversation_history}\n현재 질문: {user_input}"
+    result = identity_chain.invoke({"user_input": context_input})
     print("디버깅: identity_node 결과 =", result)
+    
+    current_messages = state.get("messages", [])
+    updated_messages = current_messages + [("assistant", result["content"])]
+    
     return {
         **state,
-        "exit_message": result["content"]
+        "exit_message": result["content"],
+        "messages": updated_messages
     }
 
 # 의도 파악 불가 노드
@@ -72,12 +147,19 @@ def exit_node(state: OverallState) -> EndState:
                   include_keys=["exit_message","run_id"])
 def talk_node(state: OverallState) -> EndState:
     user_input = state["user_input"]
-
-    result = talk_chain.invoke({"user_input": user_input})
+    conversation_history = state.get("conversation_history", "")
+    
+    context_input = f"대화기록:\n{conversation_history}\n현재 질문: {user_input}"
+    result = talk_chain.invoke({"user_input": context_input})
     print("디버깅: talk_node 결과 =", result)
+    
+    current_messages = state.get("messages", [])
+    updated_messages = current_messages + [("assistant", result["content"])]
+    
     return {
         **state,
-        "exit_message": result["content"]
+        "exit_message": result["content"],
+        "messages": updated_messages
     }
 
 # 의도 추출 노드

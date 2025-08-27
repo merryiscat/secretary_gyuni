@@ -33,10 +33,36 @@ st.set_page_config(page_title="식사비서 재규니", layout="wide", page_icon
 # CSS 스타일 추가  
 st.markdown("""
 <style>
-/* 전체 채팅 영역 스타일링 */
+/* 전체 채팅 영역 스타일링 - 헤더 높이만큼 여백 추가 */
 .main .block-container {
-    padding-top: 1rem !important;
+    padding-top: 6rem !important;
     padding-bottom: 5rem !important;
+}
+
+/* 헤더 고정 - 다크모드 대응 */
+header[data-testid="stHeader"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999999 !important;
+    background: var(--background-color) !important;
+    border-bottom: 1px solid var(--secondary-background-color) !important;
+}
+
+/* 다크모드 감지 및 헤더 배경색 설정 */
+@media (prefers-color-scheme: dark) {
+    header[data-testid="stHeader"] {
+        background: #0e1117 !important;
+        border-bottom: 1px solid #262730 !important;
+    }
+}
+
+/* Streamlit 다크모드 클래스가 있을 때 */
+.dark header[data-testid="stHeader"],
+[data-theme="dark"] header[data-testid="stHeader"] {
+    background: #0e1117 !important;
+    border-bottom: 1px solid #262730 !important;
 }
 
 /* 사용자 메시지만 오른쪽 정렬 - img alt="user avatar"로 구분 */
@@ -213,6 +239,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# =============================
+# 💾 세션 상태 초기화
+# =============================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "session_id" not in st.session_state:
+    import uuid
+    st.session_state.session_id = f"session_{uuid.uuid4().hex[:8]}"
+
 # 챗봇 메시지 형식 출력
 with st.chat_message("assistant", avatar=ASSISTANT_AVATAR_PATH if os.path.exists(ASSISTANT_AVATAR_PATH) else None):
     st.markdown("안녕하세요! 저는 당신의 **식사비서 재규니**입니다. 무엇을 도와드릴까요?")
@@ -220,13 +256,14 @@ with st.chat_message("assistant", avatar=ASSISTANT_AVATAR_PATH if os.path.exists
 # 사이드바
 with st.sidebar:
     st.header("식사비서 재규니")
-    st.button("New Chat")
-
-# =============================
-# 💾 세션 상태 초기화
-# =============================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    
+    if st.button("New Chat"):
+        st.session_state.messages = []
+        import uuid
+        st.session_state.session_id = f"session_{uuid.uuid4().hex[:8]}"
+        st.rerun()
+    
+    st.write(f"세션 ID: `{st.session_state.session_id}`")
 
 # =============================
 # ✨ 유틸 함수 정의
@@ -261,10 +298,22 @@ if user_input:
     with st.chat_message("assistant", avatar=ASSISTANT_AVATAR_PATH if os.path.exists(ASSISTANT_AVATAR_PATH) else None):
         with st.spinner("채팅작성중.."):
             try:
+                # LangGraph에서 세션별 대화 기록 관리를 위한 config 설정
+                config = {"configurable": {"thread_id": st.session_state.session_id}}
+                
+                # UI 세션 메시지를 LangGraph 형식으로 변환
+                langgraph_messages = []
+                for msg in st.session_state.messages:
+                    if msg["role"] == "user":
+                        langgraph_messages.append(("user", msg["content"]))
+                    elif msg["role"] == "assistant":
+                        langgraph_messages.append(("assistant", msg["content"]))
+                
                 result = graph_app.invoke({
                     "user_input": user_input,
-                    "thread_id": "run-ui-001"
-                })
+                    "messages": langgraph_messages,
+                    "session_id": st.session_state.session_id
+                }, config=config)
 
                 if isinstance(result, dict):
                     # 응답 메시지 추출
